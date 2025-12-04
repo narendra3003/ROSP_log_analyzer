@@ -738,7 +738,10 @@ body {
 [data-theme="dark"] canvas {
     filter: invert(1) hue-rotate(180deg);
 }
-
+.chart-container canvas {
+  width: 400px;
+  height: 300px;
+}
 /* =============================================
    ENHANCED RESPONSIVE DESIGN STYLES
    =============================================

@@ -40,7 +40,7 @@ function getChartColors() {
 function getChartOptions(title = '') {
     const colors = getChartColors();
     return {
-        responsive: true,
+        responsive: false,
         maintainAspectRatio: false,
         plugins: {
             legend: {
@@ -126,6 +126,10 @@ function createStatusChart(results) {
     if (charts.statusChart) {
         charts.statusChart.destroy();
     }
+    ctx.width = 400;
+    ctx.height = 300;
+    ctx.style.width = '400px';
+    ctx.style.height = '300px';
 
     if (!results.status_codes || Object.keys(results.status_codes).length === 0) {
         ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
@@ -237,6 +241,10 @@ function createTimelineChart(results) {
     if (charts.timelineChart) {
         charts.timelineChart.destroy();
     }
+    ctx.width = 400;
+    ctx.height = 300;
+    ctx.style.width = '400px';
+    ctx.style.height = '300px';
 
     // Generate sample timeline data (in a real app, this would come from parsed logs)
     const colors = getChartColors();
@@ -286,6 +294,10 @@ function createErrorChart(results) {
     if (charts.errorChart) {
         charts.errorChart.destroy();
     }
+    ctx.width = 400;
+    ctx.height = 300;
+    ctx.style.width = '400px';
+    ctx.style.height = '300px';
 
     const colors = getChartColors();
     const totalEntries = results.total_entries || 100;
