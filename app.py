@@ -1,22 +1,76 @@
-#!/usr/bin/env python3
-"""
-Professional Log Analytics Tool
-A simple, beautiful web interface for log analysis
-
-Author: Rezaul Karim
-Email: work.rezaul@outlook.com
-Powered By: REZ LAB
-"""
-
+#!/usr/bin/env python
 from flask import Flask, render_template, request, jsonify, redirect, url_for
-import os
-import json
-import datetime
+import time, threading, random, os, json, datetime, re, csv, io
 from werkzeug.utils import secure_filename
-import re
 from collections import Counter, defaultdict
-import csv
-import io
+app = Flask(__name__)
+
+UPLOAD_FILE_PATH = "uploads/current_log.log"
+watcher_running = True
+last_modified = 0
+
+
+def generate_random_log_record():
+    levels = ["INFO", "WARN", "ERROR", "DEBUG"]
+    return f"{time.strftime('%Y-%m-%d %H:%M:%S')} [{random.choice(levels)}] Random event ID {random.randint(1000,9999)}\n"
+
+
+def add_random_logs(x):
+    with open(UPLOAD_FILE_PATH, "a") as f:
+        for _ in range(x):
+            f.write(generate_random_log_record())
+
+def schedule_random_logs(x, y):
+    def worker():
+        if y <= 0:
+            add_random_logs(x)
+        else:
+            while True:
+                time.sleep(y)
+                add_random_logs(x)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+def watch_file():
+    global last_modified
+    while watcher_running:
+        if os.path.exists(UPLOAD_FILE_PATH):
+            modified = os.path.getmtime(UPLOAD_FILE_PATH)
+            if modified != last_modified:
+                last_modified = modified
+                print("File changed → reprocessing...")
+                run_analytics()
+        time.sleep(1)
+
+
+def run_analytics():
+    """Dummy analytics function"""
+    print("Running log analytics...")
+    with open(UPLOAD_FILE_PATH, "r") as f:
+        lines = f.readlines()
+    print(f"Total lines in file = {len(lines)}")
+
+
+# Start file watcher thread
+threading.Thread(target=watch_file, daemon=True).start()
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    file = request.files["logfile"]
+    file.save(UPLOAD_FILE_PATH)
+    return jsonify({"status": "uploaded"})
+
+
+@app.route("/add-random", methods=["POST"])
+def add_random_api():
+    data = request.json
+    x = int(data["count"])
+    y = int(data["interval"])
+    schedule_random_logs(x, y)
+    return jsonify({"status": "random logs scheduled"})
+
+
+
 
 # Flask application configuration
 app = Flask(__name__)
@@ -391,44 +445,10 @@ analyzer = LogAnalyzer()
 
 @app.route('/')
 def index():
-    """
-    Main dashboard route that serves the web interface.
-
-    This route renders the main HTML template with the log analysis interface.
-    The template includes file upload, text input, filtering, and results display.
-
-    Returns:
-        str: Rendered HTML template for the main dashboard
-    """
     return render_template('index.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    """
-    Analyze uploaded file or pasted log content.
-
-    This endpoint handles two types of input:
-    1. File upload: Users can upload log files (.log, .txt) up to 50MB
-    2. Text paste: Users can paste log content directly into a textarea
-
-    The function performs the following steps:
-    1. Validates input (file or text content)
-    2. Saves uploaded files to the uploads directory
-    3. Detects log format automatically
-    4. Parses logs using appropriate regex patterns
-    5. Performs comprehensive analysis based on log type
-    6. Saves results as JSON for export functionality
-    7. Returns analysis results as JSON response
-
-    Returns:
-        JSON response with analysis results or error message
-
-    Error Handling:
-    - Returns error if no content provided
-    - Returns error if file is too large (handled by Flask's MAX_CONTENT_LENGTH)
-    - Returns error if parsing fails
-    - Returns error if analysis encounters exceptions
-    """
     try:
         # Check if file was uploaded
         if 'log_file' in request.files and request.files['log_file'].filename:
@@ -472,27 +492,6 @@ def analyze():
 
 @app.route('/export/<format_type>')
 def export_results(format_type):
-    """
-    Export analysis results in various formats (CSV, TXT, JSON).
-
-    This endpoint retrieves the most recent analysis results and exports them
-    in the requested format. The export includes:
-    - Summary statistics (total entries, error counts, format detection)
-    - Format-specific analysis (IPs, URLs, hostnames, etc.)
-    - Time-based distributions
-    - Professional formatting with headers and sections
-
-    Args:
-        format_type (str): Export format - 'csv', 'txt', or 'json'
-
-    Returns:
-        File download response or error message
-
-    Supported Formats:
-    - CSV: Structured data with sections for different analysis types
-    - TXT: Human-readable text report with ASCII formatting
-    - JSON: Enhanced JSON structure with metadata and organized sections
-    """
     try:
         # Get latest analysis results file
         results_files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if f.startswith('analysis_')]
@@ -799,17 +798,6 @@ def export_results(format_type):
     )
 
 if __name__ == '__main__':
-    """
-    Main entry point for the Log Analytics Tool application.
-
-    This block runs when the script is executed directly (not imported as a module).
-    It starts the Flask development server with the following configuration:
-    - debug=True: Enables debug mode for development (auto-reload, detailed errors)
-    - host='0.0.0.0': Binds to all available network interfaces (accessible from other machines)
-    - port=5000: Runs the application on port 5000
-
-    In production, consider using a WSGI server like Gunicorn or uWSGI instead of Flask's development server.
-    """
     try:
         print("🚀 Starting Log Analytics Tool...")
         print("📊 Web interface available at: http://localhost:5000")

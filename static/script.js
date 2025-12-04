@@ -536,6 +536,19 @@ function toggleTextInput() {
     }
 }
 
+function addRandom() {
+    let x = document.getElementById("count").value;
+    let y = document.getElementById("interval").value;
+
+    fetch("/add-random", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({count: x, interval: y})
+    })
+    .then(r => r.json())
+    .then(res => document.getElementById("response").innerText = "Random logs scheduled!");
+}
+
 // Character counting for textarea
 logTextarea.addEventListener('input', function() {
     const charCount = this.value.length;
