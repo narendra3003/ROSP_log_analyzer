@@ -494,7 +494,13 @@ let originalLogs = [];         // Keep original log data for reference
 let filtersActive = false;     // Whether filters are currently applied
 
 // Drag and drop functionality
-uploadArea.addEventListener('click', () => fileInput.click());
+uploadArea.addEventListener("click", (e) => {
+    // Only trigger fileInput click if the actual uploadArea container was clicked,
+    // not the children elements like <i> icons
+    if (e.target === uploadArea) {
+        fileInput.click();
+    }
+});
 
 uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -508,17 +514,15 @@ uploadArea.addEventListener('dragleave', () => {
 uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
     uploadArea.classList.remove('dragover');
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        fileInput.files = files;
-        analyzeLogs();
+    if (e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0]; // only first file
+        analyzeLogs([file]); // pass as array or adapt function
     }
 });
 
 fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
-        analyzeLogs();
+        uploadArea.querySelector(".upload-text").textContent = fileInput.files[0].name;
     }
 });
 
@@ -947,7 +951,235 @@ function toggleFilters() {
     feather.replace();
 }
 
-function applyFilters() {
+// function applyFilters() {
+//     if (!currentResults) {
+//         showNotification('Please analyze logs first before applying filters.', 'warning');
+//         return;
+//     }
+
+//     const filters = {
+//         start_date: document.getElementById('startDate').value,
+//         end_date: document.getElementById('endDate').value,
+//         ip_filter: document.getElementById('ipFilter').value.trim(),
+//         status_filter: document.getElementById('statusFilter').value,
+//         url_filter: document.getElementById('urlFilter').value.trim(),
+//         search_text: document.getElementById('searchText').value.trim(),
+//         log_level: document.getElementById('logLevelFilter').value
+//     };
+
+//     // Check if any filters are applied
+//     const hasFilters = Object.values(filters).some(value => value && value !== '');
+
+//     if (!hasFilters) {
+//         showNotification('Please set at least one filter to apply.', 'info');
+//         return;
+//     }
+
+//     // Store active filters for summary display
+//     activeFilters = {};
+//     Object.keys(filters).forEach(key => {
+//         if (filters[key] && filters[key] !== '') {
+//             activeFilters[key] = filters[key];
+//         }
+//     });
+
+//     // Show loading state with progress
+//     showLoadingState('Applying filters...');
+
+//     // Simulate filtering process with progress
+//     simulateProgress(() => {
+//         displayFilteredResults(currentResults, filters);
+//         updateFilterSummary();
+//         hideLoadingState();
+//         showNotification(`Filters applied successfully! Found ${Math.floor(currentResults.total_entries * 0.8)} matching entries.`, 'success');
+//     }, 800);
+// }
+
+// function displayFilteredResults(results, filters) {
+//     // Create a copy of results for filtering
+//     const filteredResults = JSON.parse(JSON.stringify(results));
+
+//     // Apply client-side filtering for demo
+//     // In a real application, this would be done server-side
+
+//     // Filter by status codes
+//     if (filters.status_filter) {
+//         if (filteredResults.status_codes) {
+//             // Keep only the selected status code
+//             const originalCount = filteredResults.status_codes[filters.status_filter] || 0;
+//             filteredResults.status_codes = { [filters.status_filter]: originalCount };
+//             filteredResults.total_entries = originalCount;
+//         }
+//     }
+
+//     // Filter by IP address
+//     if (filters.ip_filter) {
+//         if (filteredResults.top_ips) {
+//             filteredResults.top_ips = filteredResults.top_ips.filter(([ip]) =>
+//                 ip.includes(filters.ip_filter)
+//             );
+//         }
+//     }
+
+//     // Filter by URL pattern
+//     if (filters.url_filter) {
+//         if (filteredResults.top_urls) {
+//             filteredResults.top_urls = filteredResults.top_urls.filter(([url]) =>
+//                 url.toLowerCase().includes(filters.url_filter.toLowerCase())
+//             );
+//         }
+//     }
+
+//     // Filter by search text (simulate)
+//     if (filters.search_text) {
+//         // In a real app, this would search through the actual log entries
+//         const searchTerm = filters.search_text.toLowerCase();
+//         if (searchTerm.includes('error')) {
+//             filteredResults.error_count = Math.min(filteredResults.error_count, filteredResults.total_entries);
+//         }
+//     }
+
+//     // Filter by log level
+//     if (filters.log_level) {
+//         // Simulate filtering by log level
+//         if (filters.log_level === 'ERROR') {
+//             filteredResults.error_count = filteredResults.total_entries;
+//             filteredResults.warning_count = 0;
+//         } else if (filters.log_level === 'WARN') {
+//             filteredResults.warning_count = filteredResults.total_entries;
+//             filteredResults.error_count = 0;
+//         }
+//     }
+
+//     // Update counts based on applied filters
+//     const filterCount = Object.keys(activeFilters).length;
+//     if (filterCount > 0) {
+//         const reductionFactor = Math.max(0.3, 1 - (filterCount * 0.15));
+//         filteredResults.total_entries = Math.floor(filteredResults.total_entries * reductionFactor);
+//         filteredResults.error_count = Math.floor(filteredResults.error_count * reductionFactor);
+//         filteredResults.warning_count = Math.floor(filteredResults.warning_count * reductionFactor);
+//     }
+
+//     // Re-display results
+//     displayResults(filteredResults);
+//     filtersActive = true;
+// }
+
+// function clearFilters() {
+//     // Clear all filter inputs
+//     document.getElementById('startDate').value = '';
+//     document.getElementById('endDate').value = '';
+//     document.getElementById('ipFilter').value = '';
+//     document.getElementById('statusFilter').value = '';
+//     document.getElementById('urlFilter').value = '';
+//     document.getElementById('searchText').value = '';
+//     document.getElementById('logLevelFilter').value = '';
+
+//     // Clear active filters
+//     activeFilters = {};
+
+//     // Reset to original results
+//     if (currentResults) {
+//         displayResults(currentResults);
+//         updateFilterSummary();
+//         filtersActive = false;
+//         showNotification('All filters cleared.', 'info');
+//     }
+// }
+
+// function updateFilterSummary() {
+//     const filterSummary = document.getElementById('filterSummary');
+//     const filterTags = document.getElementById('filterTags');
+
+//     if (Object.keys(activeFilters).length === 0) {
+//         filterSummary.classList.remove('active');
+//         return;
+//     }
+
+//     filterSummary.classList.add('active');
+//     filterTags.innerHTML = '';
+
+//     // Create filter tags
+//     Object.entries(activeFilters).forEach(([key, value]) => {
+//         const tag = document.createElement('div');
+//         tag.className = 'filter-tag';
+
+//         let label = '';
+//         let icon = '';
+
+//         switch(key) {
+//             case 'start_date':
+//                 label = `From: ${new Date(value).toLocaleDateString()}`;
+//                 icon = 'calendar';
+//                 break;
+//             case 'end_date':
+//                 label = `To: ${new Date(value).toLocaleDateString()}`;
+//                 icon = 'calendar';
+//                 break;
+//             case 'ip_filter':
+//                 label = `IP: ${value}`;
+//                 icon = 'user';
+//                 break;
+//             case 'status_filter':
+//                 label = `Status: ${value}`;
+//                 icon = 'hash';
+//                 break;
+//             case 'url_filter':
+//                 label = `URL: ${value}`;
+//                 icon = 'link';
+//                 break;
+//             case 'search_text':
+//                 label = `Search: "${value}"`;
+//                 icon = 'search';
+//                 break;
+//             case 'log_level':
+//                 label = `Level: ${value}`;
+//                 icon = 'alert-circle';
+//                 break;
+//         }
+
+//         tag.innerHTML = `
+//             <i data-feather="${icon}"></i>
+//             <span>${label}</span>
+//             <div class="filter-tag-remove" onclick="removeFilter('${key}')">
+//                 <i data-feather="x"></i>
+//             </div>
+//         `;
+
+//         filterTags.appendChild(tag);
+//     });
+
+//     feather.replace();
+// }
+
+// function removeFilter(filterKey) {
+//     // Remove specific filter
+//     delete activeFilters[filterKey];
+
+//     // Reapply remaining filters
+//     if (Object.keys(activeFilters).length > 0) {
+//         const remainingFilters = {};
+
+//         // Recreate filters object from active filters
+//         Object.keys(activeFilters).forEach(key => {
+//             const element = document.getElementById(key === 'log_level' ? 'logLevelFilter' :
+//                                                    key === 'search_text' ? 'searchText' :
+//                                                    key === 'url_filter' ? 'urlFilter' :
+//                                                    key === 'status_filter' ? 'statusFilter' :
+//                                                    key === 'ip_filter' ? 'ipFilter' :
+//                                                    key === 'start_date' ? 'startDate' :
+//                                                    'endDate');
+//             if (element) {
+//                 remainingFilters[key] = element.value;
+//             }
+//         });
+
+//         applyFilters();
+//     } else {
+//         clearFilters();
+//     }
+// }
+function applyFilters(showNotify = true) {
     if (!currentResults) {
         showNotification('Please analyze logs first before applying filters.', 'warning');
         return;
@@ -972,12 +1204,9 @@ function applyFilters() {
     }
 
     // Store active filters for summary display
-    activeFilters = {};
-    Object.keys(filters).forEach(key => {
-        if (filters[key] && filters[key] !== '') {
-            activeFilters[key] = filters[key];
-        }
-    });
+    activeFilters = Object.fromEntries(
+        Object.entries(filters).filter(([k, v]) => v !== '')
+    );
 
     // Show loading state with progress
     showLoadingState('Applying filters...');
@@ -989,6 +1218,10 @@ function applyFilters() {
         hideLoadingState();
         showNotification(`Filters applied successfully! Found ${Math.floor(currentResults.total_entries * 0.8)} matching entries.`, 'success');
     }, 800);
+
+    if (showNotify) {
+        showNotification(`Filters applied successfully!`, 'success');
+    }
 }
 
 function displayFilteredResults(results, filters) {
@@ -1049,12 +1282,12 @@ function displayFilteredResults(results, filters) {
 
     // Update counts based on applied filters
     const filterCount = Object.keys(activeFilters).length;
-    if (filterCount > 0) {
-        const reductionFactor = Math.max(0.3, 1 - (filterCount * 0.15));
-        filteredResults.total_entries = Math.floor(filteredResults.total_entries * reductionFactor);
-        filteredResults.error_count = Math.floor(filteredResults.error_count * reductionFactor);
-        filteredResults.warning_count = Math.floor(filteredResults.warning_count * reductionFactor);
-    }
+    // if (filterCount > 0) {
+    //     // const reductionFactor = Math.max(0.3, 1 - (filterCount * 0.15));
+    //     // filteredResults.total_entries = Math.floor(filteredResults.total_entries * reductionFactor);
+    //     // filteredResults.error_count = Math.floor(filteredResults.error_count * reductionFactor);
+    //     // filteredResults.warning_count = Math.floor(filteredResults.warning_count * reductionFactor);
+    // }
 
     // Re-display results
     displayResults(filteredResults);
@@ -1149,31 +1382,34 @@ function updateFilterSummary() {
 }
 
 function removeFilter(filterKey) {
-    // Remove specific filter
+    // Clear DOM value
+    const mapping = {
+        start_date: 'startDate',
+        end_date: 'endDate',
+        ip_filter: 'ipFilter',
+        status_filter: 'statusFilter',
+        url_filter: 'urlFilter',
+        search_text: 'searchText',
+        log_level: 'logLevelFilter'
+    };
+
+    const elementId = mapping[filterKey];
+    if (elementId) {
+        const element = document.getElementById(elementId);
+        if (element) element.value = '';
+    }
+
+    // Remove from active filters
     delete activeFilters[filterKey];
 
-    // Reapply remaining filters
-    if (Object.keys(activeFilters).length > 0) {
-        const remainingFilters = {};
-
-        // Recreate filters object from active filters
-        Object.keys(activeFilters).forEach(key => {
-            const element = document.getElementById(key === 'log_level' ? 'logLevelFilter' :
-                                                   key === 'search_text' ? 'searchText' :
-                                                   key === 'url_filter' ? 'urlFilter' :
-                                                   key === 'status_filter' ? 'statusFilter' :
-                                                   key === 'ip_filter' ? 'ipFilter' :
-                                                   key === 'start_date' ? 'startDate' :
-                                                   'endDate');
-            if (element) {
-                remainingFilters[key] = element.value;
-            }
-        });
-
-        applyFilters();
-    } else {
+    // If no filters left → reset
+    if (Object.keys(activeFilters).length === 0) {
         clearFilters();
+        return;
     }
+
+    // Reapply remaining active filters from DOM
+    applyFilters(false); // false = don't notify again
 }
 
 // =============================================
