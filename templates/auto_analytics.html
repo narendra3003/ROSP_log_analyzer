@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Log Analytics Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles2.css') }}">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<header class="header">
+    <div class="container">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">📊</div>
+                <div>
+                    <div class="logo-text">Log Analytics</div>
+                    <div class="logo-subtitle">Professional Log Analysis Tool</div>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="toggleDarkMode()" id="darkModeToggle">
+                    <span id="themeText">Light Mode</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+    <div class="container">
+
+        <!-- === FILE PATH INPUT SECTION === -->
+        <div class="upload-section fade-in">
+            <h1 class="section-title">Monitor Log File</h1>
+            <p class="section-subtitle">Enter a log file path. The system will watch it and refresh analysis automatically.</p>
+
+            <div class="form-container">
+                <h2>File Path to Monitor</h2>
+                <div class="form-inputs-group">
+                    <input type="text" id="filePathInput" placeholder="Example: C:/logs/app.log" class="form-input">
+                    <button onclick="startMonitoring()" class="form-button">Start Monitoring</button>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="analyzeLogs()">
+                    Analyze Logs
+                </button>
+                <button class="btn btn-secondary" onclick="clearAll()">
+                    Clear
+                </button>
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <!-- === LOADING === -->
+        <div class="loading" id="loading">
+            <div>Analyzing your logs...</div>
+        </div>
+
+        <!-- === RESULTS === -->
+        <div class="results-section" id="resultsSection">
+            <h2 class="section-title">Analysis Results</h2>
+            <div class="results-grid" id="resultsGrid">
+                    <!-- Results will be populated here -->
+                </div>
+
+            <!-- CHARTS -->
+            <div class="charts-section" id="chartsSection">
+                <h3 class="card-title">Data Visualization</h3>
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h4 class="chart-title">HTTP Status Distribution</h4>
+                        <canvas id="statusChart"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h4 class="chart-title">Top IP Addresses</h4>
+                        <canvas id="ipsChart"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h4 class="chart-title">Request Timeline</h4>
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h4 class="chart-title">Error Rate Trend</h4>
+                        <canvas id="errorChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export -->
+            <div class="export-section">
+                <h3 class="card-title">Export Results</h3>
+                <div class="export-buttons">
+                    <button class="btn btn-primary" onclick="exportResults('csv')">
+                        Download CSV
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportResults('txt')">
+                        Download TXT
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportResults('json')">
+                        Download JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer-content">
+            <div class="author-info"><strong>Author:</strong> Rezaul Karim</div>
+            <div class="powered-by"><strong>Powered By:</strong> Grp 8 DBIT 2025 ROSP project</div>
+        </div>
+    </div>
+</footer>
+
+<script src="{{ url_for('static', filename='script2.js') }}"></script>
+</body>
+</html>

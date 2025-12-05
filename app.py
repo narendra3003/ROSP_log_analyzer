@@ -5,72 +5,6 @@ from werkzeug.utils import secure_filename
 from collections import Counter, defaultdict
 app = Flask(__name__)
 
-UPLOAD_FILE_PATH = "uploads/current_log.log"
-watcher_running = True
-last_modified = 0
-
-
-def generate_random_log_record():
-    levels = ["INFO", "WARN", "ERROR", "DEBUG"]
-    return f"{time.strftime('%Y-%m-%d %H:%M:%S')} [{random.choice(levels)}] Random event ID {random.randint(1000,9999)}\n"
-
-
-def add_random_logs(x):
-    with open(UPLOAD_FILE_PATH, "a") as f:
-        for _ in range(x):
-            f.write(generate_random_log_record())
-
-def schedule_random_logs(x, y):
-    def worker():
-        if y <= 0:
-            add_random_logs(x)
-        else:
-            while True:
-                time.sleep(y)
-                add_random_logs(x)
-
-    threading.Thread(target=worker, daemon=True).start()
-
-def watch_file():
-    global last_modified
-    while watcher_running:
-        if os.path.exists(UPLOAD_FILE_PATH):
-            modified = os.path.getmtime(UPLOAD_FILE_PATH)
-            if modified != last_modified:
-                last_modified = modified
-                print("File changed → reprocessing...")
-                run_analytics()
-        time.sleep(1)
-
-
-def run_analytics():
-    """Dummy analytics function"""
-    print("Running log analytics...")
-    with open(UPLOAD_FILE_PATH, "r") as f:
-        lines = f.readlines()
-    print(f"Total lines in file = {len(lines)}")
-
-
-# Start file watcher thread
-threading.Thread(target=watch_file, daemon=True).start()
-
-@app.route("/upload", methods=["POST"])
-def upload():
-    file = request.files["logfile"]
-    file.save(UPLOAD_FILE_PATH)
-    return jsonify({"status": "uploaded"})
-
-
-@app.route("/add-random", methods=["POST"])
-def add_random_api():
-    data = request.json
-    x = int(data["count"])
-    y = int(data["interval"])
-    schedule_random_logs(x, y)
-    return jsonify({"status": "random logs scheduled"})
-
-
-
 
 # Flask application configuration
 app = Flask(__name__)
@@ -83,25 +17,8 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'dev-secret-key-chang
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 class LogAnalyzer:
-    """
-    Main log analysis engine that handles parsing, format detection, and analysis of various log types.
-
-    This class supports multiple log formats commonly used in ISP and office environments:
-    - Web server logs (Apache, Nginx)
-    - Network device logs (MikroTik, Cisco, Juniper)
-    - System logs (Syslog)
-    - Generic log formats
-    """
 
     def __init__(self):
-        """
-        Initialize the LogAnalyzer with regex patterns for different log formats.
-
-        Each pattern is designed to capture specific fields from different log types:
-        - Web logs: IP, timestamp, method, URL, status code, response size, user agent
-        - Network logs: timestamp, hostname/interface, process, message
-        - Generic logs: flexible pattern for unknown formats
-        """
         self.log_patterns = {
             # Apache/Nginx web server logs
             # Format: IP ident user [timestamp] "method URL protocol" status size "referrer" "user_agent"
@@ -125,20 +42,6 @@ class LogAnalyzer:
         }
 
     def detect_log_format(self, sample_lines):
-        """
-        Automatically detect the log format by testing regex patterns against sample lines.
-
-        Args:
-            sample_lines (list): List of log lines to analyze
-
-        Returns:
-            str: Detected format name ('apache', 'nginx', 'syslog', 'mikrotik', 'cisco', 'juniper', or 'generic')
-
-        Logic:
-        - Tests each regex pattern against the first 10 lines
-        - If 50% or more lines match a pattern, that format is selected
-        - Falls back to 'generic' if no format matches well
-        """
         for fmt, pattern in self.log_patterns.items():
             matches = 0
             # Check first 10 lines to avoid processing entire file during detection
@@ -221,20 +124,6 @@ class LogAnalyzer:
         return parsed_logs, log_format
 
     def analyze_logs(self, parsed_logs):
-        """
-        Analyze parsed logs and extract meaningful insights based on log format.
-
-        This method performs format-specific analysis:
-        - Web logs: IP analysis, status codes, URL tracking, error counting
-        - Network logs: Hostname/interface analysis, process tracking, security events
-        - Time-based analysis for all formats
-
-        Args:
-            parsed_logs (list): List of parsed log entries with structured data
-
-        Returns:
-            dict: Comprehensive analysis results with metrics and insights
-        """
         if not parsed_logs:
             return {}
 
@@ -257,13 +146,6 @@ class LogAnalyzer:
         # Web Server Logs Analysis (Apache/Nginx)
         # Identified by presence of 'ip' field in the parsed structure
         if 'ip' in first_log:
-            """
-            Web server log analysis focuses on:
-            - Client IP addresses and request patterns
-            - HTTP status codes and error rates
-            - Popular URLs and endpoints
-            - Traffic timing patterns
-            """
             analysis['top_ips'] = Counter(log.get('ip', '') for log in parsed_logs).most_common(10)
             analysis['status_codes'] = Counter(log.get('status', '') for log in parsed_logs)
             analysis['top_urls'] = Counter(log.get('url', '') for log in parsed_logs).most_common(10)
@@ -285,12 +167,6 @@ class LogAnalyzer:
         # Syslog Analysis
         # Identified by presence of 'hostname' field (but not 'interface' or 'process_id')
         elif 'hostname' in first_log and 'interface' not in first_log and 'process_id' not in first_log:
-            """
-            Syslog analysis focuses on:
-            - System hostnames generating logs
-            - Process activity and system events
-            - Error and warning classification
-            """
             analysis['top_hostnames'] = Counter(log.get('hostname', '') for log in parsed_logs).most_common(10)
             analysis['top_processes'] = Counter(log.get('process', '') for log in parsed_logs).most_common(10)
 
@@ -307,12 +183,6 @@ class LogAnalyzer:
         # MikroTik RouterOS Logs Analysis
         # Identified by presence of 'interface' field
         elif 'interface' in first_log:
-            """
-            MikroTik log analysis focuses on:
-            - Network interface activity and utilization
-            - Logging facilities and their activity levels
-            - Network-specific events (drops, denials, alerts)
-            """
             analysis['top_interfaces'] = Counter(log.get('interface', '') for log in parsed_logs).most_common(10)
             analysis['top_facilities'] = Counter(log.get('facility', '') for log in parsed_logs).most_common(10)
 
@@ -329,13 +199,6 @@ class LogAnalyzer:
         # Cisco IOS Logs Analysis
         # Identified by presence of 'process_id' field
         elif 'process_id' in first_log:
-            """
-            Cisco log analysis focuses on:
-            - Network device hostnames and their activity
-            - Process IDs and system processes
-            - Interface state changes and network events
-            - Security-related events and violations
-            """
             analysis['top_hostnames'] = Counter(log.get('hostname', '') for log in parsed_logs).most_common(10)
             analysis['top_process_ids'] = Counter(log.get('process_id', '') for log in parsed_logs).most_common(10)
 
@@ -355,13 +218,6 @@ class LogAnalyzer:
         # Juniper Junos Logs Analysis
         # Identified by presence of both 'process' and 'hostname' fields
         elif 'process' in first_log and 'hostname' in first_log:
-            """
-            Juniper log analysis focuses on:
-            - Network device hostnames and activity
-            - System processes and their behavior
-            - Session management events
-            - Security threats and attacks
-            """
             analysis['top_hostnames'] = Counter(log.get('hostname', '') for log in parsed_logs).most_common(10)
             analysis['top_processes'] = Counter(log.get('process', '') for log in parsed_logs).most_common(10)
 
